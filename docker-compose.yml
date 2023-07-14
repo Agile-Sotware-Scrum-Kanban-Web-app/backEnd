@@ -1,0 +1,21 @@
+version: '3'
+services:
+  db:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: agileSoftware
+      MYSQL_DATABASE: agileSoftware
+      MYSQL_USER: agileSoftware
+      MYSQL_PASSWORD: agileSoftware
+    volumes:
+      - db_data:/var/lib/mysql
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+volumes:
+  db_data:
