@@ -2,7 +2,7 @@ package com.example.agileSoftware.Service;
 
 import com.example.agileSoftware.Model.User;
 import com.example.agileSoftware.Repository.UserRepository;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -11,71 +11,83 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
+import java.util.Map;
 
 @Service
-public class UserService {
-
+public class UserService implements UserDetailsService {
+    @Autowired
     private UserRepository userRepository;
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username);
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found with username: " + username);
+        }
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(),
+                new ArrayList<>()
+        );
     }
 
-    public User registerUser(User user) {
-        // Check if username and email are available
-        if (userRepository.findByUsername(user.getUsername()) != null) {
+    public User signup(User user) {
+        User existingUser = userRepository.findByUsername(user.getUsername());
+        if (existingUser != null) {
             throw new IllegalArgumentException("Username already exists");
         }
 
-        if (userRepository.findByEmail(user.getEmail()) != null) {
-            throw new IllegalArgumentException("Email already exists");
-        }
-
-        // Hash the password before saving it in the database
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-
         return userRepository.save(user);
     }
 
-    public User loginUser(String username, String password) {
-        User user = userRepository.findByUsername(username);
-
-        if (user == null) {
-            throw new UsernameNotFoundException("User not found");
-        }
-
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new BadCredentialsException("Invalid username or password");
-        }
-
-        return user;
-    }
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
     public User getUserById(Long id) {
-        Optional<User> userOptional = userRepository.findById(id);
-        return userOptional.orElse(null);
+        return userRepository.findById(id).orElse(null);
     }
 
-    public User updateUser(Long id, User updatedUser) {
-        Optional<User> userOptional = userRepository.findById(id);
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            user.setUsername(updatedUser.getUsername());
-            user.setEmail(updatedUser.getEmail());
-            // Add more properties as needed for update
+    public User updateUserPartial(Long id, Map<String, Object> updates) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user != null) {
+            applyPartialUpdates(user, updates);
             return userRepository.save(user);
         }
         return null;
+    }
+
+    private void applyPartialUpdates(User user, Map<String, Object> updates) {
+        // Parcourez les mises à jour et appliquez-les aux champs appropriés de l'utilisateur
+        for (Map.Entry<String, Object> entry : updates.entrySet()) {
+            String fieldName = entry.getKey();
+            Object value = entry.getValue();
+
+            if (fieldName.equals("username")) {
+                user.setUsername((String) value);
+            } else if (fieldName.equals("email")) {
+                user.setEmail((String) value);
+            } // Ajoutez d'autres champs à mettre à jour si nécessaire
+            else if (fieldName.equals("role")) {
+                user.setRole((String) value);
+            }
+        }
+    }
+
+    public boolean deleteUser(Long id) {
+        if (userRepository.existsById(id)) {
+            userRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
+
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username);
     }
 }

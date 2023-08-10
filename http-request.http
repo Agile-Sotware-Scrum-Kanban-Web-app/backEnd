@@ -1,0 +1,14 @@
+###
+POST http://localhost:8081/signup
+
+<> 2023-08-10T005522.401.json
+
+
+{
+    "username": "john_doe",
+    "password": "doe123",
+    "email": "john@example.com",
+    "role": "manager"
+}
+
+###
