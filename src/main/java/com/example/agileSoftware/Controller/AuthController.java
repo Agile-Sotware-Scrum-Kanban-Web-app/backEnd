@@ -27,6 +27,7 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody User user) {
         try {
